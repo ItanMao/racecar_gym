@@ -174,7 +174,7 @@ class PPOAgent:
                 action, a_logp = self.policy_net(_obs)
                 action = action.cpu().detach().numpy()[0]
 
-                return {"motor": np.clip(action[0], -0.2, 1),
+                return {"motor": np.clip(action[0], 0.1, 1),
                         'steering': np.clip(action[1], -1, 1)}
             
                 # return {"motor": 1,

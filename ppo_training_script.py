@@ -53,7 +53,7 @@ def main():
             action, a_logp, value = agent.get_action(obs)
 
             next_obs, _, done, truncated, states = env.step(
-                {'motor': np.clip(action[0], -0.2, 1),
+                {'motor': np.clip(action[0], 0.1, 1),
                  'steering': np.clip(action[1], -1, 1)}
             )
 
@@ -70,13 +70,13 @@ def main():
             old_progress = states['progress']
 
             
-            if states['wall_collision']: 
-                ccon_time += 1
-                if ccon_time == 5:
-                    done = True
-                reward += -5
-            else:
-                ccon_time = 0
+            # if states['wall_collision']: 
+            #     ccon_time += 1
+            #     if ccon_time == 10:
+            #         done = True
+            #     reward += -5
+            # else:
+            #     ccon_time = 0
   
 
 

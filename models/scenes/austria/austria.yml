@@ -11,5 +11,5 @@ physics:
   gravity: -9.81
 
 simulation:
-  time_step: 0.01
+  time_step: 0.02
   rendering: True

@@ -26,7 +26,7 @@ def main():
         # scenario='scenarios/validation2.yml',   # Use this during the midterm competition, ONLY USE THIS FOR VALIDATION
     )
 
-    EPOCHS = 1000
+    EPOCHS = 10000
     MAX_STEP = 6000
     best_reward = -np.inf
     agent = get_training_agent(agent_name='PPO')
@@ -40,6 +40,10 @@ def main():
         total_reward = 0
         old_progress = 0
         done = False
+        ct1 = True
+        ct2 = True
+        ct3 = True
+        ct4 = True
 
         while not done and t < MAX_STEP - 1:
             # ==================================
@@ -54,13 +58,36 @@ def main():
 
             # Calculate reward
             reward = 0
-            reward += np.linalg.norm(states['velocity'][:3])
+            # reward += np.linalg.norm(states['velocity'][:3])
             reward += states['progress'] - old_progress
             old_progress = states['progress']
 
+
+
             if states['wall_collision']:
-                reward = -10
+                reward = -3000
                 done = True
+
+            if states['time'] >= 100:
+                reward = -100
+                if states['time'] == 120:
+                    done = True
+
+            if states['checkpoint'] == 1 and ct1 :
+                reward = 10
+                ct1 = False
+            
+            if states['checkpoint'] == 2 and ct2:
+                reward = 20
+                ct2 = False
+            
+            if states['checkpoint'] == 3 and ct3:
+                reward = 30
+                ct3 = False
+                
+            if states['checkpoint'] == 4 and ct4:
+                reward = 40
+                ct4 = False
 
             total_reward += reward
             agent.store_trajectory(obs, action, value, a_logp, reward)

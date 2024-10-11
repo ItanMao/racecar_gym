@@ -21,7 +21,7 @@ def main():
     env = gymnasium.make(
         'SingleAgentAustria-v0',
         render_mode=render_mode,
-        scenario='scenarios/circle_cw.yml',  # change the scenario here (change map)
+        scenario='scenarios/austria.yml',  # change the scenario here (change map)
         # scenario='scenarios/validation.yml',  # change the scenario here (change map), ONLY USE THIS FOR VALIDATION
         # scenario='scenarios/validation2.yml',   # Use this during the midterm competition, ONLY USE THIS FOR VALIDATION
     )
@@ -74,20 +74,23 @@ def main():
                     done = True
 
             if states['checkpoint'] == 1 and ct1 :
-                reward = 10
+                reward = 100
                 ct1 = False
             
             if states['checkpoint'] == 2 and ct2:
-                reward = 20
+                reward = 200
                 ct2 = False
             
             if states['checkpoint'] == 3 and ct3:
-                reward = 30
+                reward = 300
                 ct3 = False
                 
             if states['checkpoint'] == 4 and ct4:
-                reward = 40
+                reward = 400
                 ct4 = False
+
+            if states['wrong_way']:
+                reward = -10
 
             total_reward += reward
             agent.store_trajectory(obs, action, value, a_logp, reward)

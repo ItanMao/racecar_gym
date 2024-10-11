@@ -52,7 +52,7 @@ def main():
             action, a_logp, value = agent.get_action(obs)
 
             next_obs, _, done, truncated, states = env.step(
-                {'motor': np.clip(action[0], -1, 1),
+                {'motor': np.clip(action[0], -0.2, 1),
                  'steering': np.clip(action[1], -1, 1)}
             )
 
@@ -60,9 +60,6 @@ def main():
             reward = 0
             # reward += np.linalg.norm(states['velocity'][:3])
             reward += states['progress'] - old_progress
-
-            if old_progress == states['progress']:
-                reward += -1
 
             old_progress = states['progress']
 

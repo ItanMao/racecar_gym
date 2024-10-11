@@ -60,37 +60,39 @@ def main():
             reward = 0
             # reward += np.linalg.norm(states['velocity'][:3])
             reward += states['progress'] - old_progress
+
+            if old_progress == states['progress']:
+                reward += -1
+
             old_progress = states['progress']
-
-
 
             if states['wall_collision']:
                 reward = -3000
                 done = True
 
             if states['time'] >= 100:
-                reward = -100
+                reward += -100
                 if states['time'] == 120:
                     done = True
 
             if states['checkpoint'] == 1 and ct1 :
-                reward = 100
+                reward += 100
                 ct1 = False
             
             if states['checkpoint'] == 2 and ct2:
-                reward = 200
+                reward += 200
                 ct2 = False
             
             if states['checkpoint'] == 3 and ct3:
-                reward = 300
+                reward += 300
                 ct3 = False
                 
             if states['checkpoint'] == 4 and ct4:
-                reward = 400
+                reward += 400
                 ct4 = False
 
             if states['wrong_way']:
-                reward = -10
+                reward += -10
 
             total_reward += reward
             agent.store_trajectory(obs, action, value, a_logp, reward)

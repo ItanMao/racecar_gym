@@ -44,6 +44,7 @@ def main():
         ct2 = True
         ct3 = True
         ct4 = True
+        ccon_time = 0
 
         while not done and t < MAX_STEP - 1:
             # ==================================
@@ -56,40 +57,69 @@ def main():
                  'steering': np.clip(action[1], -1, 1)}
             )
 
+            # next_obs, _, done, truncated, states = env.step(
+            #     {'motor': 1,
+            #      'steering': np.clip(action[1], -1, 1)}
+            # )
+
             # Calculate reward
             reward = 0
+            
             # reward += np.linalg.norm(states['velocity'][:3])
             reward += states['progress'] - old_progress
-
             old_progress = states['progress']
 
-            if states['wall_collision']:
-                reward = -3000
-                done = True
+            
+            if states['wall_collision']: 
+                ccon_time += 1
+                if ccon_time == 5:
+                    done = True
+                reward += -5
+            else:
+                ccon_time = 0
+  
+
+
+            # if states['wall_collision']:
+            #     reward = -3000
+            #     done = True
 
             if states['time'] >= 100:
                 reward += -100
                 if states['time'] == 120:
                     done = True
 
+            if states['checkpoint'] < 1 and states['time'] >= 20 :
+                done = True
+
+            if states['checkpoint'] < 2 and states['time'] >= 40 :
+                done = True
+
+            if states['checkpoint'] < 3 and states['time'] >= 80 :
+                done = True
+
+            if states['checkpoint'] < 4 and states['time'] >= 100 :
+                done = True
+
             if states['checkpoint'] == 1 and ct1 :
-                reward += 100
+                reward += 10
                 ct1 = False
             
             if states['checkpoint'] == 2 and ct2:
-                reward += 200
+                reward += 20
                 ct2 = False
             
             if states['checkpoint'] == 3 and ct3:
-                reward += 300
+                reward += 30
                 ct3 = False
                 
             if states['checkpoint'] == 4 and ct4:
-                reward += 400
+                reward += 40
                 ct4 = False
 
             if states['wrong_way']:
                 reward += -10
+            
 
             total_reward += reward
             agent.store_trajectory(obs, action, value, a_logp, reward)
@@ -120,7 +150,7 @@ def main():
             best_reward = total_reward
             agent.save_model()
 
-        print(f"Epoch: {e}, Total reward: {total_reward:.3f}, Best reward: {best_reward:.3f}")
+        print(f"Epoch: {e}, Total reward: {total_reward:.3f}, Best reward: {best_reward:.3f}, Checkpoint: {states['checkpoint']}")
 
 
 if __name__ == '__main__':

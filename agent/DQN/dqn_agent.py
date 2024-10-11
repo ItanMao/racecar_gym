@@ -12,13 +12,13 @@ from .replay_buffer import ReplayBuffer
 class DQNAgent:
     def __init__(self,
                  state_dim: int,
-                 lr: float = 1e-4,
-                 gamma: float = 0.99,
-                 epsilon: float = 1.0,
+                 lr: float = 0.0001,
+                 gamma: float = 0.9,
+                 epsilon: float = 0.9,
                  epsilon_decay: float = 0.999,
                  epsilon_min: float = 0.01,
                  memory_size: int = 10000,
-                 batch_size: int = 32,
+                 batch_size: int = 64,
                  target_update: int = 100,
                  is_training: bool = True,
                  model_path: str = "./agent/weight.pth",
@@ -52,9 +52,7 @@ class DQNAgent:
         self.target_update = target_update
         self.is_training = is_training
         self.model_path = model_path
-        # self.device = device
-        # torch device可能會沒有GPU
-        self.device = torch.device(device if "cuda" in device and torch.cuda.is_available() else "cpu")
+        self.device = device
 
         # Build memory
         self.memory = ReplayBuffer(memory_size, state_dim)
@@ -80,8 +78,9 @@ class DQNAgent:
         Return:
             action_map (list[dict[str, float]]): list of action map
         """
-        motor = np.linspace(-1, 1.0, 10)
-        steering = np.linspace(-1.0, 1.0, 10)
+        # motor = np.linspace(0, 1.0, 10)
+        motor = [1.0]
+        steering = np.linspace(-1.0, 1.0, 12)
 
         action_map = []
         for m in motor:
@@ -97,7 +96,7 @@ class DQNAgent:
 
         Args:
             obs: dict
-                `{'rgb_image': ndarray(128, 128, 3), 'lidar': ndarray(1080,), 'pose': ndarray(6,), 'velocity': ndarray(6,), 'acceleration': ndarray(6,)`
+                `{'rgb_image': ndarray(128, 128, 3), 'lidar': ndarray(1080,), 'pose': ndarray(6,), 'velocity': ndarray(6,), 'acceleration': ndarray(6,), time: ndarray(1,}`
 
         Returns: np.ndarray
             agent observation input
@@ -105,6 +104,8 @@ class DQNAgent:
         """
 
         # TODO Make your own observation preprocessing
+        
+        
 
         return np.concatenate([obs['pose'], obs['velocity'], obs['acceleration'], obs['lidar']], axis=-1)
 
@@ -121,7 +122,19 @@ class DQNAgent:
 
         """
         # TODO: Select action
-        pass
+
+        _obs = self.obs_preprocess(obs)
+        _obs = torch.tensor(_obs).float().unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            if self.is_training and np.random.random() < self.epsilon:
+                action_idx = np.random.randint(0, self.action_dim)
+            else:
+                action_idx = self.qnet_eval(_obs).argmax().item()
+
+        return self.action_map[action_idx]
+
+        
 
     def store_transition(self,
                          obs: dict,
@@ -163,6 +176,15 @@ class DQNAgent:
 
         # TODO: DQN Algorithm, formula: Q(s, a) = r + gamma * max_a' Q(s', a')
 
+        q_eval = self.qnet_eval(batch_obs)  
+        q_eval = q_eval.gather(1, batch_action)  
+        
+        q_next = self.qnet_target(batch_next_obs).detach()  
+        max_q_next = q_next.max(1)[0].view(-1, 1)  
+        
+        q_target = batch_reward + self.gamma * (1 - batch_done) * max_q_next 
+        
+        loss = self.loss_fn(q_eval, q_target)
 
         self.optimizer.zero_grad()
         loss.backward()

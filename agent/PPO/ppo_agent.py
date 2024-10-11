@@ -40,9 +40,7 @@ class PPOAgent:
         self.sample_mb_size = sample_mb_size
         self.is_training = is_training
         self.model_path = model_path
-        # self.device = device
-        # torch device可能會沒有GPU
-        self.device = torch.device(device if "cuda" in device and torch.cuda.is_available() else "cpu")
+        self.device = device
         self.memory_counter = 0
 
         # Build networks
@@ -79,7 +77,16 @@ class PPOAgent:
 
         # TODO: G_{n-1} = r_{n-1} + gamma * last_value
         # TODO: G_t = r_t + gamma * G_{t+1}
-        pass
+        for t in reversed(range(n_step)):
+            if t == n_step - 1:
+                returns[t] = rewards[t] + self.gamma * last_value
+            else:
+                returns[t] = rewards[t] + self.gamma * returns[t + 1]
+
+        return returns
+
+
+
 
     def compute_gae(self,
                     rewards: np.ndarray,
@@ -102,7 +109,20 @@ class PPOAgent:
 
         # TODO: delta_t = r_t + gamma * (V(s_{t+1}) - V(s_t))
         # TODO: adv_t = delta_t + gamma * lamb * adv_{t+1}
-        pass
+
+        for t in reversed(range(n_step)):
+            if t == n_step - 1:
+                next_value = last_value
+            else:
+                next_value = values[t + 1]
+            
+            delta = rewards[t] + self.gamma * next_value - values[t]
+            advs[t] = last_gae_lam = delta + self.gamma * self.lamb * last_gae_lam
+
+        return advs + values
+
+
+
 
     @staticmethod
     def obs_preprocess(obs: dict) -> np.ndarray:
@@ -111,7 +131,7 @@ class PPOAgent:
 
         Args:
             obs: dict
-                `{'rgb_image': ndarray(128, 128, 3), 'lidar': ndarray(1080,), 'pose': ndarray(6,), 'velocity': ndarray(6,), 'acceleration': ndarray(6,)`
+                `{'rgb_image': ndarray(128, 128, 3), 'lidar': ndarray(1080,), 'pose': ndarray(6,), 'velocity': ndarray(6,), 'acceleration': ndarray(6,), time: ndarray(1,}`
 
         Returns: np.ndarray
             agent observation input
@@ -119,6 +139,9 @@ class PPOAgent:
         """
 
         # TODO Make your own observation preprocessing
+
+
+
 
         return np.concatenate([obs['pose'], obs['velocity'], obs['acceleration'], obs['lidar']], axis=-1)
 
@@ -151,8 +174,11 @@ class PPOAgent:
                 action, a_logp = self.policy_net(_obs)
                 action = action.cpu().detach().numpy()[0]
 
-                return {"motor": np.clip(action[0], -1, 1),
+                return {"motor": np.clip(action[0], 0, 1),
                         'steering': np.clip(action[1], -1, 1)}
+            
+                # return {"motor": 1,
+                #         'steering': np.clip(action[1], -1, 1)}
 
 
     def learn(self) -> None:
@@ -210,6 +236,19 @@ class PPOAgent:
 
                 # TODO: PPO algorithm
 
+                sample_a_logps, sample_ents = self.policy_net.evaluate(sample_obs, sample_actions)
+                sample_values = self.value_net(sample_obs)
+                ent = sample_ents.mean()
+
+                v_pred_clip = sample_old_values + torch.clamp(sample_values - sample_old_values, -self.clip_val, self.clip_val)
+                v_loss1 = (sample_returns - sample_values) ** 2
+                v_loss2 = (sample_returns - v_pred_clip) ** 2
+                v_loss = torch.max(v_loss1, v_loss2).mean()
+
+                ratio = (sample_a_logps - sample_old_a_logps).exp()
+                pg_loss1 = ratio * -sample_advs
+                pg_loss2 = torch.clamp(ratio, 1.0 - self.clip_val, 1.0 + self.clip_val) * -sample_advs
+                pg_loss = torch.max(pg_loss1, pg_loss2).mean() - self.ent_weight * ent
 
                 # Train actor
                 self.opt_policy.zero_grad()

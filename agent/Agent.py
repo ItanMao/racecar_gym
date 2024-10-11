@@ -2,14 +2,14 @@ from agent.DQN.dqn_agent import DQNAgent
 from agent.PPO.ppo_agent import PPOAgent
 
 
-def get_training_agent(agent_name: str = 'DQN'):
+def get_training_agent(agent_name: str = 'PPO'):
     if agent_name == 'DQN':
         agent = DQNAgent(
             state_dim=1098,
-            lr=1e-3,
-            gamma=0.99,
-            epsilon=0.8,
-            epsilon_decay=0.995,
+            lr=1e-4,
+            gamma=0.9,
+            epsilon=0.9,
+            epsilon_decay=0.999,
             epsilon_min=0.01,
             memory_size=10000,
             batch_size=64,
@@ -37,7 +37,7 @@ def get_training_agent(agent_name: str = 'DQN'):
     return agent
 
 
-def get_valid_agent(agent_name: str = 'DQN'):
+def get_valid_agent(agent_name: str = 'PPO'):
     if agent_name == 'DQN':
         agent = DQNAgent(
             state_dim=1098,
